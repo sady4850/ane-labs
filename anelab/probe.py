@@ -37,6 +37,8 @@ def compile_program(source, blob=b"", load=False, timeout=900):
             return {"ok": False, "stage": "timeout", "wall_s": round(time.time() - started, 1)}
         lines = p.stdout.strip().splitlines()
         result = json.loads(lines[-1]) if lines else {"ok": False, "stage": "crash", "error": p.stderr[-500:]}
+        if "error" in result:
+            result["error"] = result["error"].replace(str(work) + "/", "<dir>/").replace(str(work), "<dir>")
         result["wall_s"] = round(time.time() - started, 1)
         result["mil_bytes"] = len(source)
         result["blob_bytes"] = len(blob)

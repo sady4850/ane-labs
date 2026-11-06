@@ -19,7 +19,7 @@ The shape limit is on one dimension, not on the tensor's size (`experiments/shap
 | `slice_by_size` to 2560 channels | ok | ok | | |
 | `matmul` [5120, channels] x [channels, 2048] | ok | fail | | |
 
-So any elementwise op, and a matmul whose inner dimension is, over more than 16384 channels fails, however few rows (16896 x 64 is 1M elements, 16384 x 2048 is 33M and compiles). A `matmul` whose *output* has 65536 channels compiles (`matmul` family below), so the compiler splits that one itself.
+So an elementwise op over more than 16384 channels fails, and so does a matmul whose inner dimension is that wide, however few rows (16896 x 64 is 1M elements, 16384 x 2048 is 33M and compiles). A `matmul` whose *output* has 65536 channels compiles (`matmul` family below), so the compiler splits that one itself.
 
 ## 2. The budget is functions x cost per function
 
@@ -68,16 +68,16 @@ The fit was made on the 12 frontier points above. Then 12 points it predicts, wh
 
 The edge is tight: 15 x (10.6 + 6) = 249 compiles and 16 x (10.6 + 5) = 249.6 does not, so a and B are only known to about 1%.
 
-The number of rows per function does not matter: 15 functions of 1152..2048 rows (24000 rows in all) compile where 16 functions of 64..1920 (15424 rows) do not, and Splash's 128..2048 and 256..2048 sets of 15 break at the same width (30 ok, 31 fails).
+The number of rows per function does not matter: at 23 units 15 functions of 1152..2048 rows (24000 rows in all) compile where 16 functions of 64..1920 (15424 rows) do not (tag `rows`), and Splash's 128..2048 and 256..2048 sets of 15 break at the same width (30 ok, 31 fails).
 
 ## 3. What does not count
 
-- **The rotation constant and conv.** `ffn-plain` (no conv, no 512-channel constant of up to 16 MB) has the same frontier as `ffn` at 8, 15, 16, 17 and 24 functions.
+- **The rotation constant and conv.** `ffn-plain` (no conv and no [channels, 512] fp16 constant, which is up to 16 MB) has the same frontier as `ffn` at 8, 15, 16, 17 and 24 functions.
 - **The number of functions as such.** `matmul` (one int8 dequant + matmul per function) compiles 1, 8, 15, 16, 17 and 32 functions at 128 units (65536 channels). There is no fixed 15 or 16 function limit; light functions just use little of the budget.
 
 ## 4. For an engine
 
-- Do not hardcode the function count. For an FFN split like Splash's, the number of functions the ANE takes depends on the ANE's share: `floor(249 / (10.6 + S))` on M1 Pro, 15 at Qwen3.8-27B's share 0.68 (23 units, S = 5), 17 below 20 units, 21 below 6.
+- Do not hardcode the function count. For an FFN split like Splash's, the number of functions the ANE takes depends on the ANE's share: `floor(249 / (10.6 + S))` on M1 Pro, 15 at Qwen3.8-27B's share 0.68 (23 units, S = 5), 17 up to 20 units, 21 up to 5 units.
 - A failed compile costs a full compile time (up to ~110 s here) before the empty error. A fallback that retries with half the functions is cheap compared with losing the split for the process.
 - The two failures can be told apart by the error: `CompilationFailure` for a shape (quick when the service is idle) vs an empty error for the budget (after a full compile).
 - Keep any elementwise tensor at 16384 channels or fewer: Splash's split at share 0.8 of a model with an intermediate size above 20480 would hit it.
