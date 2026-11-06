@@ -1,0 +1,6 @@
+ane-labs
+
+anelab/mil.py ports the MIL text of the FFN function of the Neural Engine
+split in Splash (https://github.com/incoai/splash, runtime/ops/AneFfn.cpp,
+runtime/ane/Program.mm), Apache License 2.0. The port is changed to take its
+shape as parameters and to drop parts of the program for the stripped families.
