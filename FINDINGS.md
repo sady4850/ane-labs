@@ -1,6 +1,6 @@
 # Findings
 
-M1 Pro (16-core ANE), 32 GB, macOS 26.5 (25F71). Raw probes in `results/M1-Pro_macOS-26.5.jsonl`.
+M1 Pro (16-core ANE), 32 GB, macOS 26.5 (25F71). Raw probes in `results/M1-Pro_macOS-26.5.jsonl`. The same frontier on an M2 Max, see section 5.
 Width is in units of 512 ANE channels; S = ceil(channels / 2560) is the number of `down` segments of an `ffn` function.
 
 ## 1. Two different failures
@@ -82,8 +82,24 @@ The number of rows per function does not matter: at 23 units 15 functions of 115
 - The two failures can be told apart by the error: `CompilationFailure` for a shape (quick when the service is idle) vs an empty error for the budget (after a full compile).
 - Keep any elementwise tensor at 16384 channels or fewer: Splash's split at share 0.8 of a model with an intermediate size above 20480 would hit it.
 
+## 5. M2 Max: the same budget
+
+M2 Max, 64 GB, macOS 27.0.1 (26A434), run by [@ghisguth](https://github.com/ghisguth) with `experiments/frontier.sh`. Raw probes in `results/M2-Max_macOS-27.0.1.jsonl`.
+
+Every frontier edge is where it is on the M1 Pro:
+
+| functions | `ffn` widest ok / first fail | `ffn-plain` | `matmul` |
+|---:|---|---|---|
+| 1, 2, 4, 8, 12, 14 | 32 / 33 (shape) | 32 / 33 (at 8) | ok at 128 |
+| 15 | 30 / 31 | 30 / 31 | ok at 128 |
+| 16, 17 | 20 / 21 | 20 / 21 | ok at 128 |
+| 20 | 5 / 6 | | |
+| 24, 32 | none / 1 | none / 1 (at 24) | ok at 128 (at 32) |
+
+All 127 probes that are in both files have the same result, the fit above predicts every `ffn` and `ffn-plain` probe on the M2 Max (0 misses), and the two failures look the same (`CompilationFailure` in under a second for a shape, an empty error after a full compile for the budget). So a ~ 10.6, B ~ 249 hold on two ANE generations and two macOS versions; the budget looks like the compiler's, not one chip's.
+
 ## Open
 
 - What the budget is in the compiled program (ANE tasks? the `.hwx` size?). B and a are in "segment" units of this one family.
 - Why `matmul` with a wide output escapes the 16384 limit, and whether an engine could split its wide elementwise ops the same way.
-- Other chips and macOS versions: the budget probably differs per ANE generation.
+- M3 and later ANEs: same on M1 Pro and M2 Max (section 5), not measured on newer chips.

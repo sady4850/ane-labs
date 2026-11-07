@@ -32,7 +32,7 @@ python3 -m anelab frontier ffn --functions 8,15,16,17 --max-units 64
 python3 -m anelab report
 ```
 
-Needs Apple silicon, Xcode command line tools, Python 3 with numpy. Tested on macOS 26.5; the programs use MIL `ios18` functions, so older macOS may refuse them. Results go to `results/<chip>_macOS-<version>.jsonl`, one line per probe. A big program takes 30-90 s to compile and the CPU is busy meanwhile.
+Needs Apple silicon, Xcode command line tools, Python 3 with numpy. Tested on macOS 26.5 (M1 Pro) and 27.0.1 (M2 Max); the programs use MIL `ios18` functions, so older macOS may refuse them. Results go to `results/<chip>_macOS-<version>.jsonl`, one line per probe. A big program takes 30-90 s to compile and the CPU is busy meanwhile.
 
 **Results from other Macs are very welcome**: run `experiments/frontier.sh` and send the jsonl (PR or issue).
 
